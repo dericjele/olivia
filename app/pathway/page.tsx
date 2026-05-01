@@ -50,8 +50,12 @@ export default function PathwayPage() {
         body: JSON.stringify(answers),
       });
       const data = await res.json();
-      setResult(data);
-      saveLead({ pathwayType: answers.qual_country === "New Zealand" ? "nz" : "overseas" });
+      if (res.ok && data.steps) {
+        setResult(data);
+        saveLead({ pathwayType: answers.qual_country === "New Zealand" ? "nz" : "overseas" });
+      } else {
+        setResult(null);
+      }
     } catch {
       setResult(null);
     }

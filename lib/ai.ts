@@ -244,7 +244,7 @@ Generate 4-6 steps appropriate to their specific situation. Mark the first incom
 
   const message = await anthropic.messages.create({
     model: "claude-sonnet-4-5",
-    max_tokens: 1000,
+    max_tokens: 2000,
     system: OLIVIA_SYSTEM,
     messages: [{ role: "user", content: prompt }],
   });
