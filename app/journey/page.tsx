@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Shell, FunnelPage } from "components/Shell";
-import { useLang } from "components/LangProvider";
-import { BackBtn, Btn, SectionLabel, ScreenTitle, ScreenSub } from "components/ui";
-import { saveLead } from "lib/storage";
+import { Shell, FunnelPage } from "@/components/Shell";
+import { useLang } from "@/components/LangProvider";
+import { BackBtn, Btn, SectionLabel, ScreenTitle, ScreenSub } from "@/components/ui";
+import { saveLead } from "@/lib/storage";
 
 const JOURNEYS = [
   {

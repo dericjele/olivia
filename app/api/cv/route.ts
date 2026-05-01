@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { extractTextFromFile, parseFormFile } from "lib/extract";
-import { analyseCV } from "../../../lib/ai";
+import { extractTextFromFile, parseFormFile } from "@/lib/extract";
+import { analyseCV } from "@/lib/ai";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;

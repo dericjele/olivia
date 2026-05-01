@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Btn } from "./ui";
 import { useLang } from "./LangProvider";
-import { saveContact } from "lib/storage";
+import { saveContact } from "@/lib/storage";
 
 interface GateProps {
   icon: string;

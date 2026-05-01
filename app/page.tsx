@@ -1,10 +1,10 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Shell } from "../components/Shell";
-import { useLang } from "../components/LangProvider";
+import { Shell } from "@/components/Shell";
+import { useLang } from "@/components/LangProvider";
 import { useEffect } from "react";
-import { getTrafficSource } from "../lib/storage";
+import { getTrafficSource } from "@/lib/storage";
 
 export default function Home() {
   const router = useRouter();

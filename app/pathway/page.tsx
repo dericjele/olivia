@@ -2,16 +2,16 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Shell, FunnelPage } from "components/Shell";
-import { useLang } from "components/LangProvider";
-import { Gate } from "components/Gate";
+import { Shell, FunnelPage } from "@/components/Shell";
+import { useLang } from "@/components/LangProvider";
+import { Gate } from "@/components/Gate";
 import {
   BackBtn, Btn, SectionLabel, ScreenTitle, ScreenSub,
   Card, DarkCard, Spinner, InsightBar, QuizOption, ProgressBar, PillTag,
-} from "components/ui";
-import { saveLead } from "lib/storage";
-import { PATHWAY_QUESTIONS } from "lib/data";
-import type { PathwayResult } from "../../lib/ai";
+} from "@/components/ui";
+import { saveLead } from "@/lib/storage";
+import { PATHWAY_QUESTIONS } from "@/lib/data";
+import type { PathwayResult } from "@/lib/ai";
 
 type Stage = "questions" | "gate" | "loading" | "result";
 

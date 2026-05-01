@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { generateWorkplaceGuidance } from "../../../lib/ai";
+import { generateWorkplaceGuidance } from "@/lib/ai";
 
 export const runtime = "nodejs";
 export const maxDuration = 20;

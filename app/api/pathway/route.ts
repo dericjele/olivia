@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { generatePathway } from "../../../lib/ai";
+import { generatePathway } from "@/lib/ai";
 
 export const runtime = "nodejs";
 export const maxDuration = 20;

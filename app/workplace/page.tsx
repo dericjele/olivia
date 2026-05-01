@@ -2,12 +2,12 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Shell, FunnelPage } from "../../components/Shell";
-import { useLang } from "../../components/LangProvider";
-import { BackBtn, Btn, SectionLabel, ScreenTitle, Card, DarkCard, Spinner } from "../../components/ui";
-import { WORKPLACE_SITUATIONS } from "../../lib/data";
-import { saveLead } from "../../lib/storage";
-import type { WorkplaceGuidanceResult } from "../../lib/ai";
+import { Shell, FunnelPage } from "@/components/Shell";
+import { useLang } from "@/components/LangProvider";
+import { BackBtn, Btn, SectionLabel, ScreenTitle, Card, DarkCard, Spinner } from "@/components/ui";
+import { WORKPLACE_SITUATIONS } from "@/lib/data";
+import { saveLead } from "@/lib/storage";
+import type { WorkplaceGuidanceResult } from "@/lib/ai";
 
 export default function WorkplacePage() {
   const router = useRouter();

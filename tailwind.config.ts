@@ -20,16 +20,16 @@ const config: Config = {
         danger:  "#E05252",
       },
       fontFamily: {
-        display: ["var(--font-bebas)", "sans-serif"],
-        body:    ["var(--font-dm)", "sans-serif"],
-        zh:      ["var(--font-noto)", "sans-serif"],
+        display: ["'Bebas Neue'", "sans-serif"],
+        body:    ["'DM Sans'", "sans-serif"],
+        zh:      ["'Noto Sans SC'", "sans-serif"],
       },
       borderRadius: {
-        app: "18px",
+        app:  "18px",
         pill: "999px",
       },
       boxShadow: {
-        card: "0 4px 24px rgba(0,0,0,0.07)",
+        card:   "0 4px 24px rgba(0,0,0,0.07)",
         yellow: "0 6px 24px rgba(245,168,0,0.28)",
       },
       keyframes: {
@@ -52,10 +52,10 @@ const config: Config = {
         },
       },
       animation: {
-        fadeUp:    "fadeUp 0.6s ease forwards",
-        blob:      "blobmorph 8s ease-in-out infinite",
-        slideUp:   "slideUp 0.35s cubic-bezier(0.4,0,0.2,1) forwards",
-        pulse2:    "pulse2 2s infinite",
+        fadeUp:  "fadeUp 0.6s ease forwards",
+        blob:    "blobmorph 8s ease-in-out infinite",
+        slideUp: "slideUp 0.35s cubic-bezier(0.4,0,0.2,1) forwards",
+        pulse2:  "pulse2 2s infinite",
       },
     },
   },

@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import type { Lang } from "lib/types";
+import type { Lang } from "@/lib/types";
 
 interface LangCtx {
   lang: Lang;

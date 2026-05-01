@@ -1,9 +1,9 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Shell, FunnelPage } from "components/Shell";
-import { useLang } from "components/LangProvider";
-import { BackBtn, Btn, SectionLabel, ScreenTitle } from "components/ui";
+import { Shell, FunnelPage } from "@/components/Shell";
+import { useLang } from "@/components/LangProvider";
+import { BackBtn, Btn, SectionLabel, ScreenTitle } from "@/components/ui";
 
 const CREDS = [
   { icon: "🎓", en: "ECE Lecturer, Auckland",    zh: "奥克兰幼教讲师" },

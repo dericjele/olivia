@@ -2,15 +2,15 @@
 
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Shell, FunnelPage } from "components/Shell";
-import { useLang } from "components/LangProvider";
-import { Gate } from "components/Gate";
+import { Shell, FunnelPage } from "@/components/Shell";
+import { useLang } from "@/components/LangProvider";
+import { Gate } from "@/components/Gate";
 import {
   BackBtn, Btn, SectionLabel, ScreenTitle, ScreenSub,
   ScoreCircle, InsightBar, Card, DarkCard, Spinner,
-} from "components/ui";
-import { saveLead } from "lib/storage";
-import type { CVAnalysisResult } from "../../lib/ai";
+} from "@/components/ui";
+import { saveLead } from "@/lib/storage";
+import type { CVAnalysisResult } from "@/lib/ai";
 
 type Stage = "upload" | "gate" | "result";
 

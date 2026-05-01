@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Shell, FunnelPage } from "components/Shell";
-import { useLang } from "components/LangProvider";
-import { BackBtn, Btn, SectionLabel, ScreenTitle, ScreenSub } from "components/ui";
-import { INTERVIEW_QUESTIONS } from "lib/data";
+import { Shell, FunnelPage } from "@/components/Shell";
+import { useLang } from "@/components/LangProvider";
+import { BackBtn, Btn, SectionLabel, ScreenTitle, ScreenSub } from "@/components/ui";
+import { INTERVIEW_QUESTIONS } from "@/lib/data";
 
 type Cat = "all" | "values" | "behaviour" | "curriculum" | "culture";
 

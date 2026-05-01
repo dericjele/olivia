@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { LangProvider } from "../components/LangProvider";
+import { LangProvider } from "@/components/LangProvider";
 import "./globals.css";
 
 export const metadata: Metadata = {

@@ -1,9 +1,9 @@
 import type { NextRequest } from "next/server";
 
 /**
- * Extract plain text from uploaded file.
- * Supports: PDF, DOCX, TXT
+ * Extract plain text from uploaded CV file.
  * Files are NEVER saved to disk or database — processed in memory only.
+ * Supports: PDF, DOCX, TXT
  */
 export async function extractTextFromFile(file: File): Promise<string> {
   const name = file.name.toLowerCase();
@@ -11,7 +11,7 @@ export async function extractTextFromFile(file: File): Promise<string> {
   const buffer = Buffer.from(bytes);
 
   if (name.endsWith(".txt")) {
-    return buffer.toString("utf-8");
+    return buffer.toString("utf-8").trim();
   }
 
   if (name.endsWith(".pdf")) {
@@ -22,34 +22,27 @@ export async function extractTextFromFile(file: File): Promise<string> {
     return extractFromDOCX(buffer);
   }
 
-  throw new Error(`Unsupported file type: ${name}`);
+  throw new Error(`Unsupported file type. Please upload PDF, DOCX, or TXT.`);
 }
 
 async function extractFromPDF(buffer: Buffer): Promise<string> {
   try {
-    // Dynamic import to avoid SSR issues
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const pdfParse = require("pdf-parse");
-    const data = await pdfParse(buffer, {
-      // Limit to 10 pages — CVs are never longer
-      max: 10,
-    });
+    const data = await pdfParse(buffer, { max: 10 });
     const text = data.text
-      .replace(/\n{3,}/g, "\n\n") // collapse triple+ newlines
-      .replace(/[ \t]{2,}/g, " ")  // collapse multiple spaces
+      .replace(/\n{3,}/g, "\n\n")
+      .replace(/[ \t]{2,}/g, " ")
       .trim();
 
     if (!text || text.length < 50) {
-      throw new Error("PDF appears to be image-based or empty");
+      throw new Error("PDF appears to be image-based. Please paste your CV text instead.");
     }
     return text;
-  } catch (err) {
-    // If PDF parsing fails (scanned/image PDF), return a helpful message
-    // that the AI can still work with
-    console.error("PDF parse error:", err);
-    throw new Error(
-      "This PDF appears to be scanned or image-based. Please copy and paste your CV text instead."
-    );
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Could not read PDF";
+    if (msg.includes("image-based") || msg.includes("paste")) throw new Error(msg);
+    throw new Error("Could not read this PDF. Please paste your CV text instead.");
   }
 }
 
@@ -63,21 +56,16 @@ async function extractFromDOCX(buffer: Buffer): Promise<string> {
       .trim();
 
     if (!text || text.length < 50) {
-      throw new Error("Document appears to be empty");
+      throw new Error("Document appears to be empty.");
     }
     return text;
-  } catch (err) {
-    console.error("DOCX parse error:", err);
-    throw new Error(
-      "Could not read this document. Please try saving as PDF or copy and paste your text."
-    );
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "";
+    if (msg.includes("empty")) throw new Error(msg);
+    throw new Error("Could not read this document. Please try saving as PDF or paste your text.");
   }
 }
 
-/**
- * Parse multipart form data from a Next.js API route request.
- * Returns the file and any additional form fields.
- */
 export async function parseFormFile(
   req: NextRequest
 ): Promise<{ file: File | null; text: string | null }> {

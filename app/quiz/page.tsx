@@ -2,17 +2,17 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Shell, FunnelPage } from "../../components/Shell";
-import { useLang } from "../../components/LangProvider";
-import { Gate } from "../../components/Gate";
+import { Shell, FunnelPage } from "@/components/Shell";
+import { useLang } from "@/components/LangProvider";
+import { Gate } from "@/components/Gate";
 import {
   BackBtn, Btn, SectionLabel, ScreenTitle, ScreenSub,
   ScoreCircle, InsightBar, Card, DarkCard, Spinner,
   ProgressBar, QuizOption,
-} from "../../components/ui";
-import { saveLead } from "../../lib/storage";
-import { QUIZ_QUESTIONS } from "../../lib/data";
-import type { QuizInsightResult } from "../../lib/ai";
+} from "@/components/ui";
+import { saveLead } from "@/lib/storage";
+import { QUIZ_QUESTIONS } from "@/lib/data";
+import type { QuizInsightResult } from "@/lib/ai";
 
 type Stage = "quiz" | "gate" | "loading" | "result";
 
