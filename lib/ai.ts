@@ -4,24 +4,41 @@ const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
-// ─────────────────────────────────────────
-// SYSTEM PROMPT — shared Olivia persona
-// ─────────────────────────────────────────
-const OLIVIA_SYSTEM = `You are Olivia, an experienced Early Childhood Education (ECE) lecturer and career consultant based in Auckland, New Zealand. You have deep expertise in:
+// Model selection
+// Haiku  → fast structured JSON tasks (pathway, quiz insight) ~2-4s
+// Sonnet → nuanced analysis tasks (CV, workplace guidance)   ~6-10s
+const HAIKU  = "claude-haiku-4-5-20251001";
+const SONNET = "claude-sonnet-4-6";
 
-- New Zealand's ECE curriculum framework Te Whāriki and its five strands (Belonging, Wellbeing, Exploration, Communication, Contribution)
-- NZ Teaching Council registration pathways for both NZ-trained and overseas-trained teachers
-- Learning Stories as assessment tools — how to write them, what makes them effective in NZ ECE
-- NZ ECE hiring practices, what centre managers look for, values-based interviewing
-- The cultural context of Chinese ECE professionals navigating the NZ system
-- NZ Employment Relations Act and workplace rights
-- The difference between NZ child-led play philosophy vs structured curriculum approaches
+const OLIVIA_SYSTEM = `You are Olivia, an ECE lecturer and career consultant in Auckland, NZ. You specialise in helping Chinese-trained ECE professionals navigate New Zealand's early childhood sector. You know Te Whāriki, Learning Stories, NZ Teaching Council registration, values-based interviewing, and NZ employment law. Be warm, specific and practical. Never give generic advice.`;
 
-You communicate with warmth, honesty and specificity. You never give generic advice — you always connect your guidance to NZ ECE realities. You are bilingual (English and Mandarin) but respond in the language of the input unless told otherwise.`;
+// ─── HELPERS ─────────────────────────────────────────────
 
-// ─────────────────────────────────────────
-// CV ANALYSIS — ECE-optimised
-// ─────────────────────────────────────────
+function parseJSON<T>(raw: string): T {
+  const cleaned = raw
+    .replace(/^```json\s*/i, "")
+    .replace(/^```\s*/i, "")
+    .replace(/```\s*$/i, "")
+    .trim();
+  return JSON.parse(cleaned);
+}
+
+async function ask(
+  prompt: string,
+  model: string,
+  maxTokens = 600
+): Promise<string> {
+  const msg = await anthropic.messages.create({
+    model,
+    max_tokens: maxTokens,
+    system: OLIVIA_SYSTEM,
+    messages: [{ role: "user", content: prompt }],
+  });
+  return (msg.content[0] as { type: string; text: string }).text;
+}
+
+// ─── CV ANALYSIS ────────────────────────────────────────
+
 export interface CVAnalysisResult {
   score: number;
   band: "low" | "mid" | "high";
@@ -34,69 +51,42 @@ export interface CVAnalysisResult {
 }
 
 export async function analyseCV(cvText: string): Promise<CVAnalysisResult> {
-  const prompt = `Analyse the following CV for someone applying to NZ Early Childhood Education (ECE) roles.
+  const prompt = `Analyse this CV for NZ ECE roles. Score 0-100 based on:
+- NZ ECE qualification (20pts)
+- Te Whāriki knowledge (15pts)
+- Learning Stories experience (15pts)
+- NZ ECE language/tone (15pts)
+- ECE work experience (20pts)
+- NZ CV presentation (15pts)
 
-SCORING CRITERIA — score out of 100 based on:
-1. NZ ECE qualification recognition (is it TC-registrable?) — 20 points
-2. Te Whāriki / NZ curriculum knowledge evident — 15 points  
-3. Learning Stories experience mentioned — 15 points
-4. Language and tone appropriate for NZ ECE (child-led, reflective, strengths-based) — 15 points
-5. Relevant ECE work experience (NZ preferred, overseas accepted) — 20 points
-6. Professional presentation for NZ job market (layout, length, referees) — 15 points
+Return ONLY valid JSON, no markdown:
+{"score":N,"headline":"one sentence","keyInsight":"most important thing they need to know","strengths":["s1","s2"],"gaps":["g1","g2","g3"],"quickWins":["w1","w2","w3"]}
 
-Return ONLY valid JSON in this exact structure (no markdown, no explanation outside JSON):
-{
-  "score": <number 0-100>,
-  "headline": "<one sentence summary of their ECE career readiness>",
-  "keyInsight": "<the single most important thing this person needs to know — be specific and honest>",
-  "strengths": ["<strength 1 — specific to NZ ECE>", "<strength 2>", "<strength 3 if applicable>"],
-  "gaps": ["<gap 1 — specific NZ ECE gap>", "<gap 2>", "<gap 3 if applicable>", "<gap 4 if applicable>"],
-  "quickWins": ["<actionable fix 1 they can do this week>", "<actionable fix 2>", "<actionable fix 3>"]
-}
+CV:
+${cvText.substring(0, 3000)}`;
 
-CV TO ANALYSE:
-${cvText.substring(0, 4000)}`;
+  const raw = await ask(prompt, SONNET, 500);
+  const parsed = parseJSON<{
+    score: number;
+    headline: string;
+    keyInsight: string;
+    strengths: string[];
+    gaps: string[];
+    quickWins: string[];
+  }>(raw);
 
-  const message = await anthropic.messages.create({
-    model: "claude-sonnet-4-5",
-    max_tokens: 800,
-    system: OLIVIA_SYSTEM,
-    messages: [{ role: "user", content: prompt }],
-  });
-
-  const raw = (message.content[0] as { type: string; text: string }).text;
-
-  // Strip any markdown fences if present
-  const cleaned = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-  const parsed = JSON.parse(cleaned);
-
-  const score: number = parsed.score ?? 50;
-  const band: "low" | "mid" | "high" =
+  const score = parsed.score ?? 50;
+  const band: CVAnalysisResult["band"] =
     score >= 68 ? "high" : score >= 45 ? "mid" : "low";
-
-  // Score-responsive next step routing
   const nextStep: CVAnalysisResult["nextStep"] =
-    score >= 68
-      ? "interview_bank"   // CV is solid — move to interview prep
-      : score >= 45
-      ? "full_package"     // Needs both CV + interview help
-      : "cv_session";      // CV needs work first
+    score >= 68 ? "interview_bank" : score >= 45 ? "full_package" : "cv_session";
 
-  return {
-    score,
-    band,
-    headline: parsed.headline ?? "",
-    keyInsight: parsed.keyInsight ?? "",
-    strengths: parsed.strengths ?? [],
-    gaps: parsed.gaps ?? [],
-    quickWins: parsed.quickWins ?? [],
-    nextStep,
-  };
+  const { score: _s, ...rest } = parsed;
+  return { score, band, nextStep, ...rest };
 }
 
-// ─────────────────────────────────────────
-// QUIZ RESULT INSIGHT
-// ─────────────────────────────────────────
+// ─── QUIZ INSIGHT ────────────────────────────────────────
+
 export interface QuizInsightResult {
   title: string;
   insight: string;
@@ -108,42 +98,34 @@ export async function generateQuizInsight(
   score: number,
   answers: number[]
 ): Promise<QuizInsightResult> {
-  const band = score >= 75 ? "high" : score >= 45 ? "mid" : "low";
-
-  const prompt = `A Chinese ECE professional in NZ has completed a readiness quiz and scored ${score}% (${band} readiness band).
-
-Their answer pattern: ${answers.join(", ")} (scores per question, max 10 each)
-Lowest scoring areas are questions: ${answers
-    .map((s, i) => ({ i: i + 1, s }))
+  const weakQuestions = answers
+    .map((s, i) => ({ q: i + 1, s }))
     .sort((a, b) => a.s - b.s)
     .slice(0, 3)
-    .map((x) => x.i)
-    .join(", ")}
+    .map((x) => x.q);
 
-The quiz questions cover: (1) Qualification, (2) Te Whāriki knowledge, (3) Learning Stories, (4) English confidence, (5) Teacher Registration, (6) Interview experience, (7) NZ workplace culture, (8) CV readiness, (9) Parent communication, (10) Timeline
+  // Questions: 1=Qual, 2=TeWhariki, 3=LearningStories, 4=English,
+  //            5=Registration, 6=Interviews, 7=Culture, 8=CV, 9=Parents, 10=Timeline
+  const qLabels: Record<number, string> = {
+    1: "ECE qualification", 2: "Te Whāriki knowledge",
+    3: "Learning Stories",  4: "English confidence",
+    5: "Teacher registration", 6: "NZ interview experience",
+    7: "NZ workplace culture", 8: "NZ-ready CV",
+    9: "Parent communication", 10: "Timeline",
+  };
+  const weakAreas = weakQuestions.map((q) => qLabels[q] ?? `Q${q}`).join(", ");
 
-Return ONLY valid JSON:
-{
-  "title": "<short punchy title for their result — honest, not generic>",
-  "insight": "<2-3 sentences specific to their score pattern — what this means for their NZ ECE job search>",
-  "primaryGap": "<the single biggest gap holding them back, named specifically>",
-  "recommendation": "<one clear recommended next action>"}`;
+  const prompt = `NZ ECE readiness quiz result: ${score}% (weak areas: ${weakAreas}).
 
-  const message = await anthropic.messages.create({
-    model: "claude-sonnet-4-5",
-    max_tokens: 400,
-    system: OLIVIA_SYSTEM,
-    messages: [{ role: "user", content: prompt }],
-  });
+Return ONLY valid JSON, no markdown:
+{"title":"short honest title","insight":"2 sentences specific to their weak areas","primaryGap":"single biggest gap named specifically","recommendation":"one clear next action"}`;
 
-  const raw = (message.content[0] as { type: string; text: string }).text;
-  const cleaned = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-  return JSON.parse(cleaned);
+  const raw = await ask(prompt, HAIKU, 250);
+  return parseJSON<QuizInsightResult>(raw);
 }
 
-// ─────────────────────────────────────────
-// WORKPLACE SUPPORT GUIDANCE
-// ─────────────────────────────────────────
+// ─── WORKPLACE GUIDANCE ──────────────────────────────────
+
 export interface WorkplaceGuidanceResult {
   validation: string;
   guidance: string[];
@@ -151,52 +133,33 @@ export interface WorkplaceGuidanceResult {
   reminder: string;
 }
 
-const situationDescriptions: Record<string, string> = {
-  manager:  "difficulty with a difficult or unsupportive manager in their ECE centre",
-  voice:    "feeling unheard and invisible within their ECE team",
-  job:      "anxiety and serious worry about their job security in their ECE role",
-  cultural: "cultural misunderstandings and communication barriers in their NZ ECE workplace",
-  rights:   "concerns about being treated unfairly or experiencing possible discrimination at their ECE centre",
-  other:    "a difficult and distressing workplace situation in their NZ ECE role",
+const situationMap: Record<string, string> = {
+  manager:  "a difficult or unsupportive manager",
+  voice:    "feeling unheard and invisible in their team",
+  job:      "serious anxiety about their job security",
+  cultural: "cultural misunderstandings and communication barriers",
+  rights:   "concerns about unfair treatment or possible discrimination",
+  other:    "a difficult workplace situation",
 };
 
 export async function generateWorkplaceGuidance(
   situationId: string
 ): Promise<WorkplaceGuidanceResult> {
-  const situation =
-    situationDescriptions[situationId] || situationDescriptions.other;
+  const situation = situationMap[situationId] ?? situationMap.other;
 
-  const prompt = `A Chinese ECE professional working in New Zealand is experiencing ${situation}. They have come here because they have nobody else to turn to for advice.
+  const prompt = `A Chinese ECE professional in NZ is experiencing ${situation}. They have nobody to turn to.
 
-Write warm, empathetic, practically helpful guidance. Return ONLY valid JSON:
-{
-  "validation": "<2-3 sentences: acknowledge their experience specifically, normalise it without dismissing it, make them feel genuinely heard and safe>",
-  "guidance": [
-    "<practical step 1 — specific to NZ ECE workplace context>",
-    "<practical step 2>",
-    "<practical step 3>"
-  ],
-  "nzContext": "<1-2 sentences about relevant NZ employment rights, e.g. Employment Relations Act, right to raise a personal grievance, Employment NZ helpline 0800 20 90 20 — DO NOT give legal advice, DO point to resources>",
-  "reminder": "<1 warm, human closing sentence — remind them this situation does not define their career or their worth>"
+Return ONLY valid JSON, no markdown:
+{"validation":"2-3 warm sentences making them feel heard","guidance":["practical step 1","practical step 2","practical step 3"],"nzContext":"1-2 sentences about NZ employment rights or Employment NZ helpline 0800 20 90 20","reminder":"one warm closing sentence"}
+
+Max 220 words total. Warm first, practical second. No legal advice.`;
+
+  const raw = await ask(prompt, SONNET, 450);
+  return parseJSON<WorkplaceGuidanceResult>(raw);
 }
 
-Tone: warm first, practical second. This person is anxious and needs to feel safe before they can hear advice. Max 280 words total across all fields.`;
+// ─── TC PATHWAY ──────────────────────────────────────────
 
-  const message = await anthropic.messages.create({
-    model: "claude-sonnet-4-5",
-    max_tokens: 600,
-    system: OLIVIA_SYSTEM,
-    messages: [{ role: "user", content: prompt }],
-  });
-
-  const raw = (message.content[0] as { type: string; text: string }).text;
-  const cleaned = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-  return JSON.parse(cleaned);
-}
-
-// ─────────────────────────────────────────
-// TC PATHWAY GENERATOR
-// ─────────────────────────────────────────
 export interface PathwayStep {
   number: number;
   title: string;
@@ -217,39 +180,20 @@ export async function generatePathway(answers: {
   qual_level: string;
   nz_experience: string;
 }): Promise<PathwayResult> {
-  const prompt = `A person wants to know their NZ Teacher Registration pathway. Their situation:
-- Qualification country: ${answers.qual_country}
-- Qualification level: ${answers.qual_level}  
+  const isOverseas = answers.qual_country !== "New Zealand";
+  const isBachelor = answers.qual_level.includes("Bachelor");
+  const hasNZExp   = answers.nz_experience.startsWith("Yes");
+
+  const prompt = `NZ Teacher Registration pathway for:
+- Qualification from: ${answers.qual_country}
+- Level: ${answers.qual_level}
 - NZ ECE experience: ${answers.nz_experience}
 
-Based on NZ Teaching Council requirements, generate their specific registration pathway.
+Return ONLY valid JSON, no markdown:
+{"complexity":"straightforward|moderate|complex","summary":"2 sentences about their specific situation","steps":[{"number":1,"title":"step title","body":"what to actually do — specific documents and where to go","status":"done|active|upcoming","estimatedTime":"e.g. 2-4 weeks"}],"warning":"one critical thing that causes delays OR null"}
 
-Return ONLY valid JSON:
-{
-  "complexity": "<'straightforward' | 'moderate' | 'complex'>",
-  "summary": "<2 sentences explaining their specific situation and why their pathway is that complexity>",
-  "steps": [
-    {
-      "number": 1,
-      "title": "<step title>",
-      "body": "<specific practical description — what they actually need to do, what documents, where to go>",
-      "status": "<'done' | 'active' | 'upcoming'>",
-      "estimatedTime": "<realistic time estimate e.g. '2-4 weeks' or 'ongoing'>"
-    }
-  ],
-  "warning": "<optional: one critical thing that commonly causes delays for people in their situation — null if none>"
-}
+Generate ${isOverseas ? "5" : "4"} steps. First incomplete step = active, completed = done, rest = upcoming. Be specific to NZ Teaching Council requirements.`;
 
-Generate 4-6 steps appropriate to their specific situation. Mark the first incomplete step as 'active', any already-done steps as 'done', rest as 'upcoming'.`;
-
-  const message = await anthropic.messages.create({
-    model: "claude-sonnet-4-5",
-    max_tokens: 2000,
-    system: OLIVIA_SYSTEM,
-    messages: [{ role: "user", content: prompt }],
-  });
-
-  const raw = (message.content[0] as { type: string; text: string }).text;
-  const cleaned = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-  return JSON.parse(cleaned);
+  const raw = await ask(prompt, HAIKU, 600);
+  return parseJSON<PathwayResult>(raw);
 }

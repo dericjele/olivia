@@ -1,0 +1,20 @@
+{
+  "regions": ["syd1"],
+  "functions": {
+    "app/api/cv/route.ts": {
+      "maxDuration": 30
+    },
+    "app/api/pathway/route.ts": {
+      "maxDuration": 30
+    },
+    "app/api/quiz/route.ts": {
+      "maxDuration": 30
+    },
+    "app/api/workplace/route.ts": {
+      "maxDuration": 30
+    },
+    "app/api/leads/route.ts": {
+      "maxDuration": 10
+    }
+  }
+}

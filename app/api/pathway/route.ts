@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { generatePathway } from "@/lib/ai";
 
 export const runtime = "nodejs";
-export const maxDuration = 20;
+export const maxDuration = 30; // Requires Vercel Pro — on free tier use 10
 
 export async function POST(req: NextRequest) {
   try {
@@ -16,6 +16,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(result);
   } catch (err) {
     console.error("Pathway error:", err);
-    return NextResponse.json({ error: "Failed to generate pathway." }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to generate pathway." },
+      { status: 500 }
+    );
   }
 }
