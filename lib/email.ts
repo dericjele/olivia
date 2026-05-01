@@ -20,89 +20,128 @@ const JOURNEY_LABELS: Record<string, string> = {
   booking:   "Booking",
 };
 
-const SCORE_BAND = (score?: number) => {
-  if (!score) return "";
-  if (score >= 68) return `${score} — Strong ✅`;
-  if (score >= 45) return `${score} — Mid ⚠️`;
-  return `${score} — Needs work 🔴`;
-};
+function row(label: string, value: unknown) {
+  if (!value) return "";
+  return `
+    <tr style="border-bottom:1px solid #f0f0f0">
+      <td style="padding:10px 0;color:#888;width:160px;font-size:13px;vertical-align:top">${label}</td>
+      <td style="padding:10px 0;color:#111;font-size:13px">${value}</td>
+    </tr>`;
+}
 
-/**
- * Send an instant lead alert to Olivia.
- * Fire-and-forget — never blocks the user response.
- */
+function section(title: string, content: string) {
+  if (!content.trim()) return "";
+  return `
+    <tr><td colspan="2" style="padding:16px 0 6px;font-size:11px;font-weight:600;
+      letter-spacing:1.5px;text-transform:uppercase;color:#aaa">${title}</td></tr>
+    ${content}`;
+}
+
 export async function sendLeadAlert(lead: LeadInsert): Promise<void> {
   if (!TO) {
-    console.warn("[email] LEAD_NOTIFICATION_EMAIL not set — skipping alert");
+    console.warn("[email] LEAD_NOTIFICATION_EMAIL not set");
     return;
   }
 
   const journey = JOURNEY_LABELS[lead.journey ?? ""] ?? lead.journey ?? "Unknown";
-  const score   = SCORE_BAND(lead.score);
-  const source  = lead.source ? `post: ${lead.source}` : "direct";
-  const lang    = lead.lang === "zh" ? "Chinese 🇨🇳" : "English 🇳🇿";
-  const notes   = lead.notes ? JSON.stringify(lead.notes, null, 2) : "—";
-  const time    = new Date().toLocaleString("en-NZ", { timeZone: "Pacific/Auckland" });
+  const n       = lead.notes ?? {};
+  const time    = new Date().toLocaleString("en-NZ", {
+    timeZone: "Pacific/Auckland",
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
+
+  // Score band label
+  const scoreBand = lead.score
+    ? lead.score >= 68 ? `${lead.score}/100 — Strong ✅`
+    : lead.score >= 45 ? `${lead.score}/100 — Mid range ⚠️`
+    : `${lead.score}/100 — Needs work 🔴`
+    : null;
 
   const html = `
-    <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:24px">
-      <div style="background:#F5A800;border-radius:12px;padding:20px 24px;margin-bottom:24px">
-        <h1 style="margin:0;font-size:22px;color:#111">🔔 New Lead</h1>
-        <p style="margin:6px 0 0;color:#333;font-size:14px">${time} NZT</p>
-      </div>
+  <div style="font-family:-apple-system,sans-serif;max-width:580px;margin:0 auto;padding:0">
 
-      <table style="width:100%;border-collapse:collapse;font-size:14px">
-        <tr style="border-bottom:1px solid #eee">
-          <td style="padding:12px 0;color:#666;width:140px">Contact</td>
-          <td style="padding:12px 0;font-weight:600;color:#111">${lead.contact}</td>
-        </tr>
-        <tr style="border-bottom:1px solid #eee">
-          <td style="padding:12px 0;color:#666">Journey</td>
-          <td style="padding:12px 0;color:#111">${journey}</td>
-        </tr>
-        ${score ? `
-        <tr style="border-bottom:1px solid #eee">
-          <td style="padding:12px 0;color:#666">Score</td>
-          <td style="padding:12px 0;color:#111">${score}</td>
-        </tr>` : ""}
-        <tr style="border-bottom:1px solid #eee">
-          <td style="padding:12px 0;color:#666">Language</td>
-          <td style="padding:12px 0;color:#111">${lang}</td>
-        </tr>
-        <tr style="border-bottom:1px solid #eee">
-          <td style="padding:12px 0;color:#666">Source</td>
-          <td style="padding:12px 0;color:#111">${source}</td>
-        </tr>
-        ${lead.notes ? `
-        <tr>
-          <td style="padding:12px 0;color:#666;vertical-align:top">Details</td>
-          <td style="padding:12px 0;color:#111">
-            <pre style="margin:0;font-size:12px;background:#f5f5f5;padding:10px;border-radius:6px;white-space:pre-wrap">${notes}</pre>
-          </td>
-        </tr>` : ""}
+    <!-- Header -->
+    <div style="background:#F5A800;padding:20px 28px;border-radius:12px 12px 0 0">
+      <h1 style="margin:0;font-size:20px;color:#111;font-weight:700">🔔 New Lead — ${journey}</h1>
+      <p style="margin:5px 0 0;color:#555;font-size:13px">${time} NZT</p>
+    </div>
+
+    <!-- Body -->
+    <div style="background:#fff;padding:20px 28px;border-radius:0 0 12px 12px;border:1px solid #eee;border-top:none">
+      <table style="width:100%;border-collapse:collapse">
+
+        <!-- Contact -->
+        ${section("Contact", `
+          ${row("Contact", lead.contact)}
+          ${row("Language", lead.lang === "zh" ? "Chinese 🇨🇳" : "English 🇳🇿")}
+          ${row("City", lead.city)}
+          ${row("Time in NZ", lead.nz_duration)}
+          ${row("Currently employed", lead.employed)}
+          ${row("Heard from", lead.heard_from)}
+          ${row("Traffic source", lead.source ? `RedNote post: ${lead.source}` : null)}
+        `)}
+
+        <!-- Journey & Score -->
+        ${section("Journey & Score", `
+          ${row("Journey", journey)}
+          ${row("Score", scoreBand)}
+          ${row("Quiz weak areas", n.quiz_weak_areas)}
+          ${row("Biggest blocker", n.biggest_blocker)}
+          ${row("Recommendation", n.recommendation)}
+        `)}
+
+        <!-- CV Analysis -->
+        ${n.cv_score ? section("CV Analysis", `
+          ${row("CV score", scoreBand)}
+          ${row("CV headline", n.cv_headline)}
+          ${row("Key insight", n.cv_key_insight)}
+          ${row("Gaps", n.cv_gaps)}
+          ${row("Strengths", n.cv_strengths)}
+          ${row("Quick wins", n.cv_quick_wins)}
+          ${row("Suggested next step", n.cv_next_step)}
+          ${row("File type", n.file_type)}
+        `) : ""}
+
+        <!-- Pathway -->
+        ${n.pathway_type ? section("Registration Pathway", `
+          ${row("Pathway type", n.pathway_type)}
+          ${row("Qual country", n.qual_country)}
+          ${row("Qual level", n.qual_level)}
+          ${row("NZ experience", n.nz_experience)}
+        `) : ""}
+
+        <!-- Workplace -->
+        ${n.workplace_situation ? section("Workplace Support", `
+          ${row("Situation type", n.workplace_situation)}
+        `) : ""}
+
+        <!-- Booking Intent -->
+        ${lead.booking_need ? section("Booking Intent", `
+          ${row("Needs help with", lead.booking_need)}
+          ${row("Timeline", lead.booking_timeline)}
+        `) : ""}
+
       </table>
 
-      <div style="margin-top:24px;padding:16px;background:#f9f9f9;border-radius:8px;font-size:13px;color:#666">
+      <!-- CTA -->
+      <div style="margin-top:20px;padding:14px 16px;background:#f9f9f9;border-radius:8px;font-size:13px">
         <a href="${APP_URL}" style="color:#F5A800;font-weight:600;text-decoration:none">
-          View in Supabase Dashboard →
+          View all leads in Supabase →
         </a>
       </div>
     </div>
-  `;
+  </div>`;
 
   try {
     const { error } = await getResend().emails.send({
       from:    FROM,
       to:      TO,
-      subject: `🔔 New Lead — ${journey} (${lead.contact})`,
+      subject: `🔔 ${journey} — ${lead.contact}${lead.score ? ` (${lead.score}/100)` : ""}`,
       html,
     });
-
-    if (error) {
-      console.error("[email] resend error:", error);
-    }
+    if (error) console.error("[email] resend error:", error);
   } catch (err) {
-    // Never throw — email failure should never break the user flow
     console.error("[email] unexpected error:", err);
   }
 }

@@ -7,25 +7,26 @@ import { useLang } from "@/components/LangProvider";
 import { Gate } from "@/components/Gate";
 import {
   BackBtn, Btn, SectionLabel, ScreenTitle, ScreenSub,
-  Card, DarkCard, Spinner, InsightBar, QuizOption, ProgressBar, PillTag,
+  Card, DarkCard, InsightBar, QuizOption, ProgressBar, PillTag,
 } from "@/components/ui";
 import { saveLead } from "@/lib/storage";
 import { PATHWAY_QUESTIONS } from "@/lib/data";
+import { buildPathway } from "@/lib/pathway";
 import type { PathwayResult } from "@/lib/ai";
 
-type Stage = "questions" | "gate" | "loading" | "result";
+type Stage = "questions" | "gate" | "result";
 
 export default function PathwayPage() {
   const router = useRouter();
-  const { t } = useLang();
+  const { t }  = useLang();
 
-  const [stage, setStage] = useState<Stage>("questions");
-  const [step, setStep] = useState(0);
+  const [stage,    setStage]    = useState<Stage>("questions");
+  const [step,     setStep]     = useState(0);
   const [selected, setSelected] = useState<number | null>(null);
-  const [answers, setAnswers] = useState<Record<string, string>>({});
-  const [result, setResult] = useState<PathwayResult | null>(null);
+  const [answers,  setAnswers]  = useState<Record<string, string>>({});
+  const [result,   setResult]   = useState<PathwayResult | null>(null);
 
-  const q = PATHWAY_QUESTIONS[step];
+  const q      = PATHWAY_QUESTIONS[step];
   const isLast = step === PATHWAY_QUESTIONS.length - 1;
 
   const next = () => {
@@ -34,6 +35,10 @@ export default function PathwayPage() {
     setAnswers(newAnswers);
     setSelected(null);
     if (isLast) {
+      // Build result immediately
+      const pathway = buildPathway(newAnswers as unknown as Parameters<typeof buildPathway>[0]);
+      setResult(pathway);
+      saveLead({ pathwayType: newAnswers.qual_country === "New Zealand" ? "nz" : "overseas" });
       setStage("gate");
       window.scrollTo({ top: 0, behavior: "smooth" });
     } else {
@@ -41,29 +46,20 @@ export default function PathwayPage() {
     }
   };
 
-  const fetchPathway = async () => {
-    setStage("loading");
-    try {
-      const res = await fetch("/api/pathway", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(answers),
-      });
-      const data = await res.json();
-      setResult(data);
-      saveLead({ pathwayType: answers.qual_country === "New Zealand" ? "nz" : "overseas" });
-    } catch {
-      setResult(null);
-    }
-    setStage("result");
-    window.scrollTo({ top: 0, behavior: "smooth" });
+  const complexityColor = {
+    straightforward: "sage"  as const,
+    moderate:        "yellow" as const,
+    complex:         "light"  as const,
   };
 
-  const complexityColor = {
-    straightforward: "sage" as const,
-    moderate: "yellow" as const,
-    complex: "light" as const,
-  };
+  const getNotes = () => ({
+    pathway_country:   answers.qual_country,
+    pathway_level:     answers.qual_level,
+    pathway_nz_exp:    answers.nz_experience,
+    pathway_complexity: result?.complexity,
+    pathway_warning:   result?.warning,
+    pathway_steps:     result?.steps?.length,
+  });
 
   return (
     <Shell>
@@ -71,7 +67,7 @@ export default function PathwayPage() {
         <BackBtn onClick={() => router.push("/journey")} label={t("Back", "返回")} />
         <SectionLabel>{t("Registration Path", "注册路径")}</SectionLabel>
         <ScreenTitle>{t("YOUR NZ TEACHER\nREGISTRATION\nPATH.", "你的新西兰\n教师注册路径")}</ScreenTitle>
-        <ScreenSub>{t("3 questions. We'll map your exact steps.", "3个问题，为你规划具体步骤。")}</ScreenSub>
+        <ScreenSub>{t("3 questions. We map your exact steps.", "3个问题，规划你的具体步骤。")}</ScreenSub>
 
         {stage === "questions" && (
           <div className="animate-fadeUp">
@@ -92,39 +88,48 @@ export default function PathwayPage() {
           </div>
         )}
 
-        {stage === "gate" && (
+        {stage === "gate" && result && (
           <div className="animate-fadeUp">
+            {/* Teaser */}
+            <Card className="mb-4">
+              <div className="flex items-center gap-3 mb-3">
+                <PillTag color={complexityColor[result.complexity]}>
+                  {result.complexity} pathway
+                </PillTag>
+                <span className="text-[12px] text-mid">
+                  {result.steps.length} {t("steps mapped", "个步骤已规划")}
+                </span>
+              </div>
+              <p className="text-[13px] text-mid leading-relaxed">
+                {t(
+                  "Enter your contact to see your full personalised pathway — including estimated timelines and common pitfalls.",
+                  "输入联系方式查看你的完整个性化路径，包括预计时间和常见陷阱。"
+                )}
+              </p>
+            </Card>
             <Gate
               icon="🗺️"
-              titleEn="Your pathway is mapped!"
-              titleZh="你的路径已规划好！"
-              subEn="Enter your contact so Olivia can send you this personalised pathway guide."
-              subZh="输入联系方式，Olivia将为你发送个性化路径指南。"
+              titleEn="Your pathway is ready"
+              titleZh="你的路径已准备好"
+              subEn="Olivia will also send you this as a reference you can save."
+              subZh="Olivia还会将此发送给你以供参考保存。"
               funnelType="pathway"
-              onContinue={fetchPathway}
+              notes={getNotes()}
+              onContinue={() => setStage("result")}
             />
           </div>
-        )}
-
-        {stage === "loading" && (
-          <Card className="flex flex-col items-center py-10 gap-4">
-            <Spinner />
-            <p className="text-[14px] text-mid">{t("Mapping your pathway...", "正在规划你的路径...")}</p>
-          </Card>
         )}
 
         {stage === "result" && result && (
           <div className="animate-fadeUp flex flex-col gap-4">
             <Card>
               <div className="flex items-center gap-3 mb-4">
-                <PillTag color={complexityColor[result.complexity]}>
-                  {result.complexity}
-                </PillTag>
+                <PillTag color={complexityColor[result.complexity]}>{result.complexity}</PillTag>
               </div>
               <InsightBar>{result.summary}</InsightBar>
               {result.warning && (
                 <div className="bg-red-50 border-l-4 border-danger rounded-r-app px-4 py-3 text-[13px] text-danger mb-4">
-                  <strong>⚠️ Watch out: </strong>{result.warning}
+                  <strong>⚠️ {t("Watch out: ", "注意：")} </strong>{result.warning}
                 </div>
               )}
             </Card>
@@ -147,15 +152,13 @@ export default function PathwayPage() {
                     <p className="text-[12px] text-mid leading-relaxed mb-2">{s.body}</p>
                     <div className="flex items-center gap-2">
                       <span className={`text-[10px] font-semibold px-2 py-1 rounded-lg ${
-                        s.status === "done" ? "bg-sage-pale text-sage" :
+                        s.status === "done"   ? "bg-sage-pale text-sage" :
                         s.status === "active" ? "bg-[#FFF8E1] text-[#C98500]" :
                         "bg-light text-mid"
                       }`}>
                         {s.status === "done" ? "✓ Done" : s.status === "active" ? "Start here" : "Upcoming"}
                       </span>
-                      {s.estimatedTime && (
-                        <span className="text-[10px] text-mid">{s.estimatedTime}</span>
-                      )}
+                      {s.estimatedTime && <span className="text-[10px] text-mid">{s.estimatedTime}</span>}
                     </div>
                   </div>
                 </div>
@@ -165,12 +168,12 @@ export default function PathwayPage() {
             <DarkCard>
               <p className="text-[14px] text-white/80 leading-relaxed mb-4">
                 {t(
-                  "This process has hidden complexity that trips most people up. Olivia has guided dozens through it — saving months of delays.",
-                  "这个流程有隐藏的复杂性，很多人都会在这里遇到障碍。Olivia已经帮助数十人完成注册，节省了数月的等待时间。"
+                  "The hidden complexity in this process trips most people up — often adding months of delays. Olivia has guided dozens through it successfully.",
+                  "这个流程隐藏的复杂性让很多人遇到障碍，往往增加数月延误。Olivia已成功帮助数十人完成注册。"
                 )}
               </p>
               <Btn onClick={() => router.push("/book")} className="mb-2">
-                {t("Book a Registration Session — $149", "预约注册咨询 — $149")}
+                {t("Book a Registration Session — $167", "预约注册咨询 — $167")}
               </Btn>
               <Btn variant="outline" onClick={() => router.push("/cv")}
                 className="border-white/20 text-white/70">
@@ -178,15 +181,6 @@ export default function PathwayPage() {
               </Btn>
             </DarkCard>
           </div>
-        )}
-
-        {stage === "result" && !result && (
-          <Card>
-            <p className="text-[14px] text-danger">{t("Something went wrong. Please try again.", "出现错误，请重试。")}</p>
-            <Btn onClick={() => { setStage("questions"); setStep(0); setAnswers({}); }} className="mt-4">
-              {t("Try Again", "重试")}
-            </Btn>
-          </Card>
         )}
       </FunnelPage>
     </Shell>
