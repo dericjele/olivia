@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { generatePathway } from "@/lib/ai";
+import { buildPathway } from "@/lib/pathway";
 
 export const runtime = "nodejs";
-export const maxDuration = 30; // Requires Vercel Pro — on free tier use 10
+export const maxDuration = 10;
 
 export async function POST(req: NextRequest) {
   try {
@@ -12,8 +12,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Incomplete answers" }, { status: 400 });
     }
 
-    const result = await generatePathway(answers);
+    // Pure logic — no AI call, instant response
+    const result = buildPathway(answers);
     return NextResponse.json(result);
+
   } catch (err) {
     console.error("Pathway error:", err);
     return NextResponse.json(
