@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { extractTextFromFile, parseFormFile } from "@/lib/extract";
 import { analyseCV } from "@/lib/ai";
+import { saveLead } from "@/lib/leads";
+import { sendLeadAlert } from "@/lib/email";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -12,7 +14,6 @@ export async function POST(req: NextRequest) {
     let cvText = "";
 
     if (file && file.size > 0) {
-      // Extract text from uploaded file — never saved to disk
       try {
         cvText = await extractTextFromFile(file);
       } catch (err: unknown) {
@@ -35,11 +36,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Analyse with Anthropic — ECE-optimised prompt
+    // Analyse — ECE-optimised prompt, no file saved
     const result = await analyseCV(cvText);
-
-    // Return analysis only — no file, no raw text stored
     return NextResponse.json(result);
+
   } catch (err) {
     console.error("CV analysis error:", err);
     return NextResponse.json(
