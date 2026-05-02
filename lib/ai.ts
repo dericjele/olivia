@@ -147,12 +147,14 @@ export async function generateWorkplaceGuidance(
 ): Promise<WorkplaceGuidanceResult> {
   const situation = situationMap[situationId] ?? situationMap.other;
 
-  const prompt = `A Chinese ECE professional in NZ is experiencing ${situation}. They have nobody to turn to.
+  const prompt = `A Chinese ECE professional in NZ is experiencing ${situation}. They came here quietly — they are not looking for a helpline or a lecture. They need someone who has seen this before and isn't alarmed by it.
+
+Respond like a trusted colleague talking quietly over coffee. Not a counsellor. Not a legal pamphlet. Just someone who gets it and has seen it before.
 
 Return ONLY valid JSON, no markdown:
-{"validation":"2-3 warm sentences making them feel heard","guidance":["practical step 1","practical step 2","practical step 3"],"nzContext":"1-2 sentences about NZ employment rights or Employment NZ helpline 0800 20 90 20","reminder":"one warm closing sentence"}
+{"validation":"2-3 sentences — name the specific situation and normalise it without dismissing it. Never start with 'I understand how you feel'. Sound like someone who has seen this before and is not surprised.","guidance":["practical step 1 — specific, doable, not overwhelming","practical step 2","practical step 3"],"nzContext":"1 quiet sentence pointing to Employment NZ 0800 20 90 20 as a free confidential resource — not framed as legal advice, just as something that exists","reminder":"one quiet closing sentence — not motivational, just human. Something a good colleague would say."}
 
-Max 220 words total. Warm first, practical second. No legal advice.`;
+Max 200 words total. Warm but not effusive. Practical but not cold. Never preachy.`;
 
   const raw = await ask(prompt, SONNET, 450);
   return parseJSON<WorkplaceGuidanceResult>(raw);

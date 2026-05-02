@@ -66,7 +66,7 @@ export default function PathwayPage() {
       <FunnelPage>
         <BackBtn onClick={() => router.push("/journey")} label={t("Back", "返回")} />
         <SectionLabel>{t("Registration Path", "注册路径")}</SectionLabel>
-        <ScreenTitle>{t("YOUR NZ TEACHER\nREGISTRATION\nPATH.", "你的新西兰\n教师注册路径")}</ScreenTitle>
+        <ScreenTitle>{t("YOUR EXACT\nNEXT STEP.\nNOTHING MORE.", "你的下一步。\n就这么简单。")}</ScreenTitle>
         <ScreenSub>{t("3 questions. We map your exact steps.", "3个问题，规划你的具体步骤。")}</ScreenSub>
 
         {stage === "questions" && (
